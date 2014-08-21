@@ -31,9 +31,9 @@
 
 #define FULL_UP       0
 #define FULL_DOWN     25000      // Needs to be calibrated
-#define HOME_OFFSET   FULL_DOWN/10    // Danger zone.  Slow home near home !!
+#define HOME_OFFSET   FULL_DOWN/25    // Danger zone.  Slow home near home !!
 #define MAX_SPEED     1500
-#define HOME_SPEED    100
+#define HOME_SPEED    300
 #define ACCELERATION  750
 #define HOME_ACCEL    10000
 
@@ -78,7 +78,7 @@ void liftHome()
                             // move stepper until the micro-switch clicks - loop here until engaged.
   Serial.write("Homing ...");
   
-  stepper.setMaxSpeed(MAX_SPEED);       // depending on drive pulley size
+  
   stepper.setAcceleration(ACCELERATION);    
 
   Serial.write("stepper.currentPosition() is ");
@@ -195,6 +195,7 @@ void setup()
   
  
   stepper.setCurrentPosition(HOME_OFFSET);      // assume we are near home
+  stepper.setMaxSpeed(MAX_SPEED);       // depending on drive pulley size
   
   stepperEnable();
   
