@@ -31,7 +31,7 @@
 
 #define FULL_UP       0
 #define FULL_DOWN     25000      // Needs to be calibrated
-#define HOME_OFFSET   FULL_DOWN/10    // Danger zone.  Don't drive past the limit switch !!
+#define HOME_OFFSET   FULL_DOWN/10    // Danger zone.  Slow home near home !!
 #define MAX_SPEED     1500
 #define HOME_SPEED    100
 #define ACCELERATION  750
@@ -76,7 +76,7 @@ void liftHome()
 {
                             // Home stepper motor 
                             // move stepper until the micro-switch clicks - loop here until engaged.
-  Serial.write("Backing up to HOME_OFFSET ...");
+  Serial.write("Homing ...");
   
   stepper.setMaxSpeed(MAX_SPEED);       // depending on drive pulley size
   stepper.setAcceleration(ACCELERATION);    
@@ -85,14 +85,14 @@ void liftHome()
   Serial.print(stepper.currentPosition());
   Serial.write("\n");
 
-  Serial.write("... Back up fast ... ");
+  Serial.write("... Raise fast ... ");
   if (stepper.currentPosition() > HOME_OFFSET){        //Zoom to offset, maybe 250 steps (2-3 feet) from top
     stepper.moveTo(HOME_OFFSET);
     while (stepper.currentPosition() > HOME_OFFSET)
       stepper.run();                            // loop until current == target
   }
      
-  Serial.write("... Back up slow ... ");
+  Serial.write("... Raise slow ... ");
   stepper.setMaxSpeed(HOME_SPEED);            // Home slow .......
   stepper.setAcceleration(HOME_ACCEL);       
   
@@ -105,7 +105,7 @@ void liftHome()
     }
   }
   
-  Serial.write("... At Home !\n");
+  Serial.write("... HOMED !\n");
 
           // Go back to full speed
   stepper.setMaxSpeed(MAX_SPEED);       // depending on drive pulley size
@@ -135,13 +135,9 @@ boolean anyDmxChanges()
     
     update = false;  
     
-    for (int i=0; i<NUM_CHANNELS; i++){
-      if (dmx_data[i] != last_dmx_data[i]){      // Any changes to DMX channels ?
-        for (int j=0; j<NUM_CHANNELS; j++)
-          last_dmx_data[j] = dmx_data[j];        // reset last to show change
-        return true;
-      }
-    }   
+    for (int i=0; i<NUM_CHANNELS; i++)
+      if (dmx_data[i] != last_dmx_data[i])      // Any changes to DMX channels ?
+        return true; 
   }
   return false;
 }
@@ -225,19 +221,10 @@ void setup()
 void loop()
 {
   unsigned int position, speed;
-  
-#if 0
-  if(digitalRead(HOME_SWITCH_PIN) != DIP_ON){      // SAFETY CODE - This should not happen !!!  Switch engaged ?
-      Serial.write("Limit Switch Engaged\n");
-    stepper.setCurrentPosition(0);                // Reset "home" here
-  }
-#endif
 
   if (anyDmxChanges())      // DMX activity directed at our channels and different values from last check ?
   {
-    update = false;
         
-#ifdef READ_DMX
     for (int j=0; j<NUM_CHANNELS; j++)
     {
       Serial.print(j);
@@ -249,12 +236,10 @@ void loop()
     
             //
             //  NEW POSITION CHANNEL
-    if (last_dmx_data[DMX_POSITION_CHANNEL] != dmx_data[DMX_POSITION_CHANNEL] || 1){      // new value ?
+    if (last_dmx_data[DMX_POSITION_CHANNEL] != dmx_data[DMX_POSITION_CHANNEL]){      // new value ?
     
       position = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, 0, FULL_DOWN);
-      Serial.write("DMX = ");
-      Serial.print(dmx_data[DMX_POSITION_CHANNEL]);
-      Serial.write("->New Position = ");
+      Serial.write("New Position = ");
       Serial.print(position);
       Serial.write("\n");
 
@@ -271,7 +256,7 @@ void loop()
     
             //
             // NEW SPEED CHANNEL
-    if (last_dmx_data[DMX_SPEED_CHANNEL] != dmx_data[DMX_SPEED_CHANNEL] || 1){      // new value ?
+    if (last_dmx_data[DMX_SPEED_CHANNEL] != dmx_data[DMX_SPEED_CHANNEL]){      // new value ?
       
       speed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, 1, MAX_SPEED);    // 1 is lowest speed.
       
@@ -280,9 +265,9 @@ void loop()
       Serial.write("\n");
       
       if (speed == 1){
-        Serial.write("Light panel ent us DMZ=0 for Speed - Disabling Stepper\n");
+        Serial.write("Light panel sent us DMZ=0 for Speed - Disabling Stepper\n");
         stepper.setMaxSpeed (1);  // Whoooooahh - operator says STOP - PANIC  (no divide by zero in AccelStepper library !)
-        stepperDisable();         // Whoooooahh - operator says STOP - PANIC
+        stepperDisable();        
       }
       else{
         if (!stepperEnabled){
@@ -294,30 +279,10 @@ void loop()
 
       last_dmx_data[DMX_SPEED_CHANNEL] = dmx_data[DMX_SPEED_CHANNEL];
     }
-#endif 
-
-
 
 
   } // if (andDmxChanges())
     
-  
-                      // SIMULATION
-#ifndef READ_DMX   
-  if (stepper.currentPosition() == stepper.targetPosition()){
-    delay(2000);
-    if(stepper.currentPosition()==FULL_DOWN){
-      Serial.write("0");
-      Serial.write("\n");
-      stepper.moveTo(FULL_UP);
-    }
-    if(stepper.currentPosition()==0){
-      Serial.write("24000");
-      Serial.write("\n");
-      stepper.moveTo(FULL_DOWN);
-    }
-  }
-#endif
 
   stepper.run();   // Call this as often as possible !!!!
 
