@@ -104,7 +104,7 @@ void liftHome()
   Serial.write("... Raise slow ... ");
 #endif
 
-  stepper.setMaxSpeed(HOME_SPEED);            // Home slow .......
+  stepper.setMaxSpeed(HOME_SPEED);            // Home slow - next speed will be set by DMX
   
   stepper.move(-FULL_DOWN);            // Zero is where the switch clicks !
   while (true){
@@ -119,8 +119,8 @@ void liftHome()
   Serial.write("... HOMED !\n");
 #endif
 
-          // Go back to full speed
-  stepper.setMaxSpeed(MAX_SPEED);       // depending on drive pulley size
+  for (int j=0; j<NUM_CHANNELS; j++)        // Initialize all previous DMX values
+      last_dmx_data[j] = 0;
 }
 
 boolean stepperEnabled = false;
@@ -183,21 +183,14 @@ void setup()
   Serial.print(dmx_start_addr);
   Serial.write("\n");
 
-  for (int j=0; j<NUM_CHANNELS; j++)        // Initialize all DMX values
-      last_dmx_data[j] = dmx_data[j] = 0;
-
 
     // set update flag idle
   update = 0;
   
   // set default DMX state
   dmx_state = DMX_IDLE;
-  
-  
-  
- 
+   
   stepper.setCurrentPosition(HOME_OFFSET);      // assume we are near home
-  stepper.setMaxSpeed(MAX_SPEED);       // depending on drive pulley size
   stepper.setAcceleration(ACCELERATION);    
 
   
