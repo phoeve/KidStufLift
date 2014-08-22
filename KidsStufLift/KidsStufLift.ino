@@ -26,7 +26,7 @@
 
 #include <AccelStepper.h>
 
-#define NUM_CHANNELS 2 // Number of DMX channels used
+#define NUM_CHANNELS 2 // Number of DMX channels to listen to
 
                   // DMX channel assignments (relative to base address)
 #define DMX_POSITION_CHANNEL 0
@@ -81,15 +81,9 @@ void liftHome()
                             // move stepper until the micro-switch clicks - loop here until engaged.
 #if DEBUG
   Serial.write("Homing ...");
-#endif
-  
-  
-
-#if DEBUG
   Serial.write("stepper.currentPosition() is ");
   Serial.print(stepper.currentPosition());
   Serial.write("\n");
-
   Serial.write("... Raise fast ... ");
 #endif
 
@@ -109,7 +103,7 @@ void liftHome()
   stepper.move(-FULL_DOWN);            // Zero is where the switch clicks !
   while (true){
     stepper.run();
-    if(digitalRead(HOME_SWITCH_PIN) != DIP_ON){
+    if(homeSwitchPushed()){
         stepper.setCurrentPosition(0);    
         break;                            // Stop !!!!!!!!!
     }
@@ -119,7 +113,7 @@ void liftHome()
   Serial.write("... HOMED !\n");
 #endif
 
-  for (int j=0; j<NUM_CHANNELS; j++)        // Initialize all previous DMX values
+  for (int j=0; j<NUM_CHANNELS; j++)        // Initialize all previous DMX values so we don't skip !
       last_dmx_data[j] = 0;
 }
 
@@ -144,6 +138,13 @@ unsigned int mapDmx(unsigned int x, unsigned int out_min, unsigned int out_max)
   return x * (out_max - out_min + 1) / (DMX_MAX_VALUE +1) + out_min;
 }
 
+boolean homeSwitchPushed()
+{
+  if(digitalRead(HOME_SWITCH_PIN) != DIP_ON)
+    return true;
+    
+  return false;
+}
 
 //===============================================================================================================
 void setup()
