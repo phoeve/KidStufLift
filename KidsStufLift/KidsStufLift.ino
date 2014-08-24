@@ -267,7 +267,7 @@ void loop()
       
       if (speed == 1){
         Serial.write("Light panel sent us DMZ=0 for Speed - Disabling Stepper\n");
-        stepper.setMaxSpeed (1);  // Whoooooahh - operator says STOP - PANIC  (no divide by zero in AccelStepper library !)
+        //stepper.setMaxSpeed (1);  // Whoooooahh - operator says STOP - PANIC  (no divide by zero in AccelStepper library !)
         stepperDisable();        
       }
       else{
