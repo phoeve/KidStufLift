@@ -132,12 +132,6 @@ void stepperDisable()
   digitalWrite(MOTOR_ENABLE_PIN, HIGH);        // HIGH disables driver/motor
 }
 
-
-unsigned int mapDmx(unsigned int x, unsigned int out_min, unsigned int out_max)
-{
-  return x * (out_max - out_min + 1) / (DMX_MAX_VALUE +1) + out_min;
-}
-
 boolean homeSwitchPushed()
 {
   if(digitalRead(HOME_SWITCH_PIN) != DIP_ON)
@@ -238,7 +232,7 @@ void loop()
             //  NEW POSITION CHANNEL
     if (last_dmx_data[DMX_POSITION_CHANNEL] != dmx_data[DMX_POSITION_CHANNEL]){      // new value ?
     
-      position = mapDmx (dmx_data[DMX_POSITION_CHANNEL], FULL_UP, FULL_DOWN);
+      position = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, FULL_UP, FULL_DOWN);
 #if DEBUG
       Serial.write("New Position = ");
       Serial.print(position);
@@ -260,7 +254,7 @@ void loop()
             // NEW SPEED CHANNEL
     if (last_dmx_data[DMX_SPEED_CHANNEL] != dmx_data[DMX_SPEED_CHANNEL]){      // new value ?
       
-      speed = mapDmx (dmx_data[DMX_SPEED_CHANNEL], MIN_SPEED, MAX_SPEED);    // 1 is lowest speed.
+      speed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed.
  
 #if DEBUG
       Serial.write("New Speed = ");
