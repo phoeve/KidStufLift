@@ -34,7 +34,7 @@
 
 #define FULL_UP       0
 #define FULL_DOWN     25000            // Needs to be calibrated
-#define HOME_OFFSET   FULL_DOWN/25     // Danger zone.  Slow home near home !!
+#define HOME_OFFSET   FULL_DOWN/20     // Danger zone.  Slow home near home !!
 #define MIN_SPEED     1                // 0 causes divide by zero in AccelStepper library
 #define MAX_SPEED     1500
 #define HOME_SPEED    300
