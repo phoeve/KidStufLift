@@ -37,7 +37,7 @@
 #define HOME_OFFSET   FULL_DOWN/20     // Danger zone.  Slow home near home !!
 #define MIN_SPEED     1                // 0 causes divide by zero in AccelStepper library
 #define MAX_SPEED     1500
-#define HOME_SPEED    300
+#define HOME_SPEED    200
 #define ACCELERATION  750
 
       // DMX info/ranges
@@ -274,7 +274,9 @@ void loop()
           stepper.setCurrentPosition(HOME_OFFSET);      // assume we are near home
           liftHome();
         }
-        stepper.setMaxSpeed (speed);
+        else{
+          stepper.setMaxSpeed (speed);
+        }
       }       
 
       last_dmx_data[DMX_SPEED_CHANNEL] = dmx_data[DMX_SPEED_CHANNEL];
