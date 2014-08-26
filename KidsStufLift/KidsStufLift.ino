@@ -271,6 +271,7 @@ void loop()
       else{
         if (!stepperEnabled){
           stepperEnable();
+          stepper.setCurrentPosition(HOME_OFFSET);      // assume we are near home
           liftHome();
         }
         stepper.setMaxSpeed (speed);
