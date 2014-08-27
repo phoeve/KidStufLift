@@ -36,9 +36,10 @@
 #define FULL_DOWN     15000            // Needs to be calibrated
 #define HOME_OFFSET   FULL_DOWN/20     // Danger zone.  Slow home near home !!
 #define MIN_SPEED     1                // 0 causes divide by zero in AccelStepper library
+#define PANIC_SPEED   MIN_SPEED
 #define MAX_SPEED     1500
 #define HOME_SPEED    200
-#define ACCELERATION  750
+#define ACCELERATION  1000
 
       // DMX info/ranges
 #define DMX_MIN_VALUE 0
@@ -72,6 +73,8 @@ AccelStepper stepper(AccelStepper::DRIVER, 9,8); // 9-PUL,8-DIR
 
 #define HOME_SWITCH_PIN 11        // Arduino pins
 
+
+boolean calibrated = false;      // until we hit the limit switch, we are NOT calibrated.  PANIC also un-calibrates !
 
 boolean homeSwitchEngaged()
 {
@@ -126,9 +129,10 @@ void setup()
   // set default DMX state
   dmx_state = DMX_IDLE;
    
-  stepper.setCurrentPosition(0);                // assume we are at zero !
   stepper.setAcceleration(ACCELERATION);   
-  stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch   
+  stepper.setCurrentPosition(0);                // assume we are at zero !
+  stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch
+  calibrated = false; 
   
   // initialize UART for DMX
   // 250 kbps, 8 bits, no parity, 2 stop bits
@@ -138,6 +142,7 @@ void setup()
 }
 
 
+
 /**************************************************************************/
 /*!
   This is where we translate the dmx data to the lift commands
@@ -145,31 +150,33 @@ void setup()
 /**************************************************************************/
 
 
-boolean calibrated = false;      // until we hit the limit switch, we are NOT calibrated.  PANIC also un-calibrates !
-
-
 void loop()
 {
   
   unsigned int newPosition, newSpeed;
 
-  if (update && calibrated) {      // only spend time here if have inboud DMX
+  if (update && calibrated) {      // only if DMX activity and we are calibrated (accepting DMX directives)
+  
+    update = 0;                    // our indication the ISR set some data.
+  
     newPosition = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, FULL_UP, FULL_DOWN);
-    newSpeed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed.
+    newSpeed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed (MIN_SPEED).
     
-    if (newSpeed == 1) {    // 1 means PANIC !!!!!!!!!  
+    if (newSpeed == PANIC_SPEED) {    // MIN_SPEED means PANIC !!!!!!!!!  
+      stepper.setCurrentPosition(0);                // assume we are at zero !
+      stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch
       calibrated = false;
-      stepper.moveTo (-FULL_DOWN);
-      return;
+    } else {
+      stepper.setMaxSpeed(newSpeed);
+      if (newPosition != stepper.targetPosition()) {
+        stepper.moveTo (newPosition);  
+      }
     }
     
-    if (newPosition != stepper.targetPosition()) {
-      stepper.moveTo (newPosition);  
-    }
   }
     
   if (stepper.currentPosition() > stepper.targetPosition()) {        // Are we raising ??
-      if (stepper.currentPosition() <= HOME_OFFSET)                  // SLOW if we are raising and we are at or above HOME_OFFSET
+      if (stepper.currentPosition() <= HOME_OFFSET)                  // SLOW if we are raising and we are at or above HOME_OFFSET (setCurrentPosition(0) will do it)
         stepper.setMaxSpeed(HOME_SPEED);                             // Override DMX speed - danger zone
   }
 
@@ -179,7 +186,7 @@ void loop()
     stepper.moveTo (0);                      // make targetPosition() match current position.
   }    
   
-  stepper.run();   // Call this as often as possible !!!!
+  stepper.run();   // Move 1 step towards targetPosition()
 
 }
 
