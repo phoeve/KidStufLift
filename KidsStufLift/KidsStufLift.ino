@@ -22,7 +22,8 @@
 //         8/22/14 - 0.3 (PH) Tested installed rig.  Streamlined code and wrote better/faster mapDmx()
 //
 
-#define DEBUG false        // Turns on/off true/false console prints.  Slows execution
+//#define UNIT_TESTING        
+
 
 #include <AccelStepper.h>
 
@@ -134,14 +135,41 @@ void setup()
   stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch
   calibrated = false; 
   
+#ifndef UNIT_TESTING
   // initialize UART for DMX
   // 250 kbps, 8 bits, no parity, 2 stop bits
   UCSR3C |= (1<<USBS3);
   Serial3.begin(250000);
+#endif
 
 }
 
+#ifdef UNIT_TESTING
+long iteration = 0;
+void simulateDmx(){
+  iteration ++;
+  
+  update = true;
+  
+  if (iteration > 25){
+    if (iteration > 50){
+      dmx_data[DMX_SPEED_CHANNEL] = 128;
+      dmx_data[DMX_POSITION_CHANNEL] = 128;
+    }
+    else{
+      dmx_data[DMX_SPEED_CHANNEL] = 0;
+      dmx_data[DMX_POSITION_CHANNEL] = 128;
+    }
+  }
+  else{
+    dmx_data[DMX_SPEED_CHANNEL] = 128;
+    dmx_data[DMX_POSITION_CHANNEL] = 128;
+  }
+  
+  delay(1000);
 
+}
+#endif
 
 /**************************************************************************/
 /*!
@@ -155,6 +183,20 @@ void loop()
 {
   
   int newPosition, newSpeed;
+  
+#ifdef UNIT_TESTING
+  simulateDmx();
+#endif
+
+#ifdef UNIT_TESTING
+    Serial.write("update: ");
+    Serial.print(update);
+    Serial.write(" calibrated: ");
+    Serial.print(calibrated);
+    Serial.write(" paniced: ");
+    Serial.print(paniced);
+    Serial.write("\n"); 
+#endif  
 
   if ((update && calibrated) || paniced) {      // only if DMX activity and we are calibrated (accepting DMX directives) OR PANICED
   
@@ -197,8 +239,16 @@ void loop()
     }    
   }
   
-  if (!paniced)
-   stepper.run();   // Move 1 step towards targetPosition() unless PANICED
+  if (!paniced){
+#ifdef UNIT_TESTING
+    Serial.write("currentPosition: ");
+    Serial.print(stepper.currentPosition());
+    Serial.write(" targetPosition: ");
+    Serial.print(stepper.targetPosition());
+    Serial.write("\n"); 
+#endif  
+    stepper.run();   // Move 1 step towards targetPosition() unless PANICED
+  }
 
 }
 
@@ -206,7 +256,7 @@ void loop()
 
 
 
-
+#ifndef UNIT_TESTING
 /**************************************************************************/
 /*!
   This is the interrupt service handler for the DMX
@@ -262,3 +312,4 @@ ISR(USART3_RX_vect)
     break;
   }
 }
+#endif
