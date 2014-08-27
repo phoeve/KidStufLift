@@ -154,7 +154,7 @@ boolean paniced = false;
 void loop()
 {
   
-  unsigned int newPosition, newSpeed;
+  int newPosition, newSpeed;
 
   if ((update && calibrated) || paniced) {      // only if DMX activity and we are calibrated (accepting DMX directives) OR PANICED
   
@@ -163,6 +163,9 @@ void loop()
     newPosition = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, FULL_UP, FULL_DOWN);
     newSpeed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed (MIN_SPEED).
     
+    if (newPosition == 0)
+      newPosition = -HOME_OFFSET;      // If DMX target position zero, let's go beyond and wait for HOME_SWITCH
+
     if (newSpeed == PANIC_SPEED) {    // MIN_SPEED means PANIC !!!!!!!!! 
       paniced = true; 
       stepper.setCurrentPosition(0);                // assume we are at zero !
