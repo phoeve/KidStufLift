@@ -33,7 +33,7 @@
 #define DMX_SPEED_CHANNEL 1
 
 #define FULL_UP       0
-#define FULL_DOWN     25000            // Needs to be calibrated
+#define FULL_DOWN     15000            // Needs to be calibrated
 #define HOME_OFFSET   FULL_DOWN/20     // Danger zone.  Slow home near home !!
 #define MIN_SPEED     1                // 0 causes divide by zero in AccelStepper library
 #define MAX_SPEED     1500
@@ -55,7 +55,6 @@ unsigned int dmx_addr;
 unsigned int chan_cnt;
       // this holds the dmx data
 unsigned char dmx_data[NUM_CHANNELS];
-unsigned char last_dmx_data[NUM_CHANNELS];
 
       // tell us when to update the pins
 volatile unsigned char update;    
@@ -72,67 +71,9 @@ unsigned int myBaseAddress = 0;
 AccelStepper stepper(AccelStepper::DRIVER, 9,8); // 9-PUL,8-DIR
 
 #define HOME_SWITCH_PIN 11        // Arduino pins
-#define MOTOR_ENABLE_PIN 12
 
 
-void liftHome()
-{
-                            // Home stepper motor 
-                            // move stepper until the micro-switch clicks - loop here until engaged.
-#if DEBUG
-  Serial.write("Homing ...");
-  Serial.write("stepper.currentPosition() is ");
-  Serial.print(stepper.currentPosition());
-  Serial.write("\n");
-  Serial.write("... Raise fast ... ");
-#endif
-
-  if (stepper.currentPosition() > HOME_OFFSET){        //Zoom to offset, maybe 250 steps (2-3 feet) from top
-    stepper.moveTo(HOME_OFFSET);
-    while (stepper.currentPosition() > HOME_OFFSET)
-      stepper.run();                            // loop until current == target
-  }
-
-
-#if DEBUG     
-  Serial.write("... Raise slow ... ");
-#endif
-
-  stepper.setMaxSpeed(HOME_SPEED);            // Home slow - next speed will be set by DMX
-  
-  stepper.move(-FULL_DOWN);            // Zero is where the switch clicks !
-  while (true){
-    stepper.run();
-    if(homeSwitchPushed()){
-        stepper.setCurrentPosition(0);    
-        break;                            // Stop !!!!!!!!!
-    }
-  }
-
-#if DEBUG
-  Serial.write("... HOMED !\n");
-#endif
-
-  for (int j=0; j<NUM_CHANNELS; j++)        // Initialize all previous DMX values so we don't skip !
-      last_dmx_data[j] = 0;
-}
-
-boolean stepperEnabled = false;
-
-void stepperEnable()              // Enable/Disable stops motor no matter what state
-{  
-  stepperEnabled = true;
-  digitalWrite(MOTOR_ENABLE_PIN, LOW);  // LOW enables driver/motor
-}
-
-
-void stepperDisable()
-{
-  stepperEnabled = false;
-  digitalWrite(MOTOR_ENABLE_PIN, HIGH);        // HIGH disables driver/motor
-}
-
-boolean homeSwitchPushed()
+boolean homeSwitchEngaged()
 {
   if(digitalRead(HOME_SWITCH_PIN) != DIP_ON)
     return true;
@@ -141,6 +82,8 @@ boolean homeSwitchPushed()
 }
 
 //===============================================================================================================
+
+
 void setup()
 {
   int i;
@@ -149,8 +92,6 @@ void setup()
   // Console port
   Serial.begin(57600);
   Serial.write("setup() ...\n");  
-
-  pinMode(MOTOR_ENABLE_PIN, OUTPUT);           // set ENABLE pin to output
 
                // Initialize the origin / HOME switch
   pinMode(HOME_SWITCH_PIN, INPUT);           // set pin to input
@@ -185,13 +126,9 @@ void setup()
   // set default DMX state
   dmx_state = DMX_IDLE;
    
-  stepper.setCurrentPosition(HOME_OFFSET);      // assume we are near home
-  stepper.setAcceleration(ACCELERATION);    
-
-  
-  stepperEnable();
-  
-  liftHome();       // If we have been disabled, we must home to reset position
+  stepper.setCurrentPosition(0);                // assume we are at zero !
+  stepper.setAcceleration(ACCELERATION);   
+  stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch   
   
   // initialize UART for DMX
   // 250 kbps, 8 bits, no parity, 2 stop bits
@@ -208,84 +145,40 @@ void setup()
 /**************************************************************************/
 
 
+boolean calibrated = false;      // until we hit the limit switch, we are NOT calibrated.  PANIC also un-calibrates !
+
 
 void loop()
 {
-  unsigned int position, speed;
+  
+  unsigned int newPosition, newSpeed;
 
-  if (update){      // only spend time here if inboud DMX
+  if (update && calibrated) {      // only spend time here if have inboud DMX
+    newPosition = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, FULL_UP, FULL_DOWN);
+    newSpeed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed.
     
-    update = false;  
-        
-#if DEBUG
-    for (int j=0; j<NUM_CHANNELS; j++)
-    {
-      Serial.print(j);
-      Serial.write("=");
-      Serial.print(dmx_data[j]);
-      Serial.write(",");
-    }
-    Serial.write("\n");
-#endif
-    
-            //
-            //  NEW POSITION CHANNEL
-    if (last_dmx_data[DMX_POSITION_CHANNEL] != dmx_data[DMX_POSITION_CHANNEL]){      // new value ?
-    
-      position = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, FULL_UP, FULL_DOWN);
-#if DEBUG
-      Serial.write("New Position = ");
-      Serial.print(position);
-      Serial.write("\n");
-#endif
-
-      
-      if (position > HOME_OFFSET)             
-        stepper.moveTo (position);   // if going to > HOME_OFFSET, ok, to go fast
-      else if (position == 0)
-            liftHome();              // Let's just go home - user has to wait until we reset.
-          else
-            stepper.moveTo (HOME_OFFSET);     // Let's just got to HOME_OFFSET, fast is ok
- 
-      last_dmx_data[DMX_POSITION_CHANNEL] = dmx_data[DMX_POSITION_CHANNEL];
+    if (newSpeed == 1) {    // 1 means PANIC !!!!!!!!!  
+      calibrated = false;
+      stepper.moveTo (-FULL_DOWN);
+      return;
     }
     
-            //
-            // NEW SPEED CHANNEL
-    if (last_dmx_data[DMX_SPEED_CHANNEL] != dmx_data[DMX_SPEED_CHANNEL]){      // new value ?
-      
-      speed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed.
- 
-#if DEBUG
-      Serial.write("New Speed = ");
-      Serial.print(speed);
-      Serial.write("\n");
-#endif
-      
-      if (speed == 1){
-#if DEBUG
-        Serial.write("Light panel sent us DMZ=0 for Speed - Disabling Stepper\n");    // DMX =0 -> mapped to speed =1 above.
-#endif
-        stepperDisable();        // Whoooooahh - operator says STOP - PANIC  (no divide by zero in AccelStepper library !)
-      }
-      else{
-        if (!stepperEnabled){
-          stepperEnable();
-          stepper.setCurrentPosition(HOME_OFFSET);      // assume we are near home
-          liftHome();
-        }
-        else{
-          stepper.setMaxSpeed (speed);
-        }
-      }       
-
-      last_dmx_data[DMX_SPEED_CHANNEL] = dmx_data[DMX_SPEED_CHANNEL];
+    if (newPosition != stepper.targetPosition()) {
+      stepper.moveTo (newPosition);  
     }
-
-
-  } // if (andDmxChanges())  OR if (update)
+  }
     
+  if (stepper.currentPosition() > stepper.targetPosition()) {        // Are we raising ??
+      if (stepper.currentPosition() <= HOME_OFFSET)                  // SLOW if we are raising and we are at or above HOME_OFFSET
+        stepper.setMaxSpeed(HOME_SPEED);                             // Override DMX speed - danger zone
+  }
 
+  if(homeSwitchEngaged()) {
+    calibrated = true;
+    stepper.setCurrentPosition(0);           // We are HOME !!! 
+    stepper.moveTo (0);                      // make targetPosition() match current position.
+  }    
+  
   stepper.run();   // Call this as often as possible !!!!
 
 }
