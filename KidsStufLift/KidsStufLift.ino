@@ -149,27 +149,34 @@ void setup()
 */
 /**************************************************************************/
 
+boolean paniced = false;
 
 void loop()
 {
   
   unsigned int newPosition, newSpeed;
 
-  if (update && calibrated) {      // only if DMX activity and we are calibrated (accepting DMX directives)
+  if ((update && calibrated) || paniced) {      // only if DMX activity and we are calibrated (accepting DMX directives) OR PANICED
   
     update = 0;                    // our indication the ISR set some data.
   
     newPosition = map (dmx_data[DMX_POSITION_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, FULL_UP, FULL_DOWN);
     newSpeed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed (MIN_SPEED).
     
-    if (newSpeed == PANIC_SPEED) {    // MIN_SPEED means PANIC !!!!!!!!!  
+    if (newSpeed == PANIC_SPEED) {    // MIN_SPEED means PANIC !!!!!!!!! 
+      paniced = true; 
       stepper.setCurrentPosition(0);                // assume we are at zero !
-      stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch
-      calibrated = false;
+      stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch when un-paniced
+      calibrated = false; 
     } else {
-      stepper.setMaxSpeed(newSpeed);
-      if (newPosition != stepper.targetPosition()) {
-        stepper.moveTo (newPosition);  
+      if (paniced){
+        paniced = false;          // un-paniced i.e. newSpeed != PANIC_SPEED .... but now we are !calibrated
+      }
+      else{
+        stepper.setMaxSpeed(newSpeed);
+        if (newPosition != stepper.targetPosition()) {
+          stepper.moveTo (newPosition);  
+        }
       }
     }
     
@@ -178,7 +185,7 @@ void loop()
   if (stepper.currentPosition() > stepper.targetPosition()) {        // Are we raising ??
       if (stepper.currentPosition() <= HOME_OFFSET)                  // SLOW if we are raising and we are at or above HOME_OFFSET (setCurrentPosition(0) will do it)
         stepper.setMaxSpeed(HOME_SPEED);                             // Override DMX speed - danger zone
-  }
+  }                                                                  // Else allow DMX to drive speed
 
   if(homeSwitchEngaged()) {
     calibrated = true;
@@ -186,7 +193,8 @@ void loop()
     stepper.moveTo (0);                      // make targetPosition() match current position.
   }    
   
-  stepper.run();   // Move 1 step towards targetPosition()
+  if (!paniced)
+   stepper.run();   // Move 1 step towards targetPosition() unless PANICED
 
 }
 
