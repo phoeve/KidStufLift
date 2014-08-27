@@ -182,16 +182,17 @@ void loop()
     
   }
     
-  if (stepper.currentPosition() > stepper.targetPosition()) {        // Are we raising ??
-      if (stepper.currentPosition() <= HOME_OFFSET)                  // SLOW if we are raising and we are at or above HOME_OFFSET (setCurrentPosition(0) will do it)
-        stepper.setMaxSpeed(HOME_SPEED);                             // Override DMX speed - danger zone
-  }                                                                  // Else allow DMX to drive speed
+  if (stepper.currentPosition() > stepper.targetPosition()) {  // Are we raising ??
+    if (stepper.currentPosition() <= HOME_OFFSET)              // SLOW if we are raising and we are at or above HOME_OFFSET (setCurrentPosition(0) will do it)
+      stepper.setMaxSpeed(HOME_SPEED);                         // Override DMX speed - danger zone
+                                                               // Else allow DMX to drive speed
 
-  if(homeSwitchEngaged()) {
-    calibrated = true;
-    stepper.setCurrentPosition(0);           // We are HOME !!! 
-    stepper.moveTo (0);                      // make targetPosition() match current position.
-  }    
+    if(homeSwitchEngaged()) {                  // Only if we are raising !
+      calibrated = true;
+      stepper.setCurrentPosition(0);           // We are HOME !!! 
+      stepper.moveTo (0);                      // make targetPosition() match current position.
+    }    
+  }
   
   if (!paniced)
    stepper.run();   // Move 1 step towards targetPosition() unless PANICED
