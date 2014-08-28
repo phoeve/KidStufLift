@@ -22,7 +22,8 @@
 //         8/22/14 - 0.3 (PH) Tested installed rig.  Streamlined code and wrote better/faster mapDmx()
 //
 
-//#define UNIT_TESTING        
+//#define UNIT_TESTING   
+#define DMX_DEBUG
 
 
 #include <AccelStepper.h>
@@ -186,17 +187,22 @@ void loop()
   
 #ifdef UNIT_TESTING
   simulateDmx();
-#endif
-
-#ifdef UNIT_TESTING
-    Serial.write("update: ");
-    Serial.print(update);
-    Serial.write(" calibrated: ");
-    Serial.print(calibrated);
-    Serial.write(" paniced: ");
-    Serial.print(paniced);
-    Serial.write("\n"); 
+  Serial.write("update: ");
+  Serial.print(update);
+  Serial.write(" calibrated: ");
+  Serial.print(calibrated);
+  Serial.write(" paniced: ");
+  Serial.print(paniced);
+  Serial.write("\n"); 
 #endif  
+
+#ifdef DMX_DEBUG
+  Serial.write("DMX Channels POSITION: ");
+  Serial.print(dmx_data[DMX_POSITION_CHANNEL]);
+  Serial.write(" SPEED: ");
+  Serial.print(dmx_data[DMX_SPEED_CHANNEL]);
+  Serial.write("\n");
+#endif
 
   if ((update && calibrated) || paniced) {      // only if DMX activity and we are calibrated (accepting DMX directives) OR PANICED
   
