@@ -23,7 +23,7 @@
 //
 
 //#define UNIT_TESTING   
-#define DMX_DEBUG
+//#define DMX_DEBUG
 
 
 #include <AccelStepper.h>
@@ -41,7 +41,7 @@
 #define PANIC_SPEED   MIN_SPEED
 #define MAX_SPEED     1500
 #define HOME_SPEED    200
-#define ACCELERATION  1000
+#define ACCELERATION  500
 
       // DMX info/ranges
 #define DMX_MIN_VALUE 0
