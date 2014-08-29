@@ -41,7 +41,7 @@
 #define PANIC_SPEED   MIN_SPEED
 #define MAX_SPEED     1500
 #define HOME_SPEED    200
-#define ACCELERATION  500
+#define ACCELERATION  500.0            // Acceleration is a float
 
       // DMX info/ranges
 #define DMX_MIN_VALUE 0
