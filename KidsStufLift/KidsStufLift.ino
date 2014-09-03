@@ -35,7 +35,7 @@
 #define DMX_SPEED_CHANNEL 1
 
 #define FULL_UP       0
-#define FULL_DOWN     15000            // Needs to be calibrated
+#define FULL_DOWN     18000            // Needs to be calibrated
 #define HOME_OFFSET   FULL_DOWN/20     // Danger zone.  Slow home near home !!
 #define MIN_SPEED     1                // 0 causes divide by zero in AccelStepper library
 #define PANIC_SPEED   MIN_SPEED
