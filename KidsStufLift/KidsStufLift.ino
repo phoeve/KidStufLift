@@ -215,12 +215,14 @@ void loop()
       newPosition = -HOME_OFFSET;      // If DMX target position zero, let's go beyond and wait for HOME_SWITCH
 
     if (newSpeed == PANIC_SPEED) {    // MIN_SPEED means PANIC !!!!!!!!! 
+      Serial.write("PANIC RECEIVED BY DMX (SPEED ZERO)\n");
       paniced = true; 
       stepper.setCurrentPosition(0);                // assume we are at zero !
       stepper.moveTo (-FULL_DOWN);                  // Send us to the home switch when un-paniced
       calibrated = false; 
     } else {
       if (paniced){
+        Serial.write("PANIC CLEARED BY DMX (SPEED NOT ZERO)\n");
         paniced = false;          // un-paniced i.e. newSpeed != PANIC_SPEED .... but now we are !calibrated
       }
       else{
@@ -243,6 +245,14 @@ void loop()
       stepper.setCurrentPosition(0);           // We are HOME !!! 
       stepper.moveTo (0);                      // make targetPosition() match current position.
     }    
+  }
+  else{                                        // We are lowering
+    if (stepper.currentPosition() > HOME_OFFSET){
+      if(homeSwitchEngaged()) {           // Since we are beyond HOME_OFFSET, switch should NOT be depressed
+        Serial.write("HOME SWITCH OR WIRING FAULTY - CORRECT AND REBOOT ARDUINO\n");
+        while (true);                     // INFINITE LOOP !!!
+      }
+    }
   }
   
   if (!paniced){
