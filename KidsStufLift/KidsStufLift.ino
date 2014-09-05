@@ -212,7 +212,7 @@ void loop()
     newSpeed = map (dmx_data[DMX_SPEED_CHANNEL], DMX_MIN_VALUE, DMX_MAX_VALUE, MIN_SPEED, MAX_SPEED);    // 1 is lowest speed (MIN_SPEED).
     
     if (newPosition == 0)
-      newPosition = -HOME_OFFSET;      // If DMX target position zero, let's go beyond and wait for HOME_SWITCH
+      newPosition = -HOME_OFFSET*2;      // If DMX target position zero, let's go beyond and wait for HOME_SWITCH
 
     if (newSpeed == PANIC_SPEED) {    // MIN_SPEED means PANIC !!!!!!!!! 
       paniced = true; 
